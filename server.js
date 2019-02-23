@@ -33,6 +33,8 @@ app.get('/location', (request, response) => {
 app.get('/weather', getWeather);
 app.get('/meetups', getMeetups);
 app.get('/movies', getMovies);
+app.get('/yelp', getYelp);
+// app.get('/trails', getTrails);
 
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
@@ -69,6 +71,16 @@ function Movie(movie) {
   this.popularity = movie.popularity;
   this.released_on = movie.release_date;
 }
+
+function Yelp(shop) {
+  this.name = shop.name;
+  this.image_url = shop.image_url;
+  this.price = shop.price;
+  this.rating = shop.rating;
+  this.url = shop.url;
+}
+
+// function Trail(trail) {}
 
 // *********************
 // HELPER FUNCTIONS
@@ -233,6 +245,46 @@ function getMovies(request, response) {
                 .catch(console.error);
             })
             response.send(movieSummaries);
+          })
+          .catch(error => handleError(error, response));
+      }
+    })
+}
+
+function getYelp(request, response) {
+
+  const SQL = `SELECT * FROM shops WHERE location_id=$1`;
+  const values = [request.query.data.id];
+
+  return client.query(SQL, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('262 From SQL', result.rows[0]);
+        response.send(result.rows);
+      } else {
+
+// THIS IS BROKEN
+
+        // app.set('Authorization', `Bearer ${process.env.YELP_API_KEY}`);
+
+// THIS IS BROKEN
+
+        const url = `https://api.yelp.com/v3/businesses/search?ll=${request.query.data.latitude},${request.query.data.longitude}`;
+
+        superagent.get(url)
+          .then(result =>{
+            const yelpSummaries = result.body.businesses.map(shop => {
+              const summary = new Yelp(shop);
+              return summary;
+            });
+            let newSQL = `INSERT INTO shops(name, image_url, price, rating, url, location_id) VALUES ($1, $2, $3, $4, $5, $6);`;
+            yelpSummaries.forEach(summary => {
+              let newValues = Object.values(summary);
+              newValues.push(request.query.data.id);
+              return client.query(newSQL, newValues)
+                .catch(console.error);
+            })
+            response.send(yelpSummaries);
           })
           .catch(error => handleError(error, response));
       }
