@@ -11,7 +11,7 @@ require('dotenv').config();
 
 // Application Setup
 const app = express();
-const PORT = process.env.PORT || 7070;
+const PORT = process.env.PORT || 1331;
 
 app.use(cors());
 
@@ -34,7 +34,7 @@ app.get('/weather', getWeather);
 app.get('/meetups', getMeetups);
 app.get('/movies', getMovies);
 app.get('/yelp', getYelp);
-// app.get('/trails', getTrails);
+app.get('/trails', getTrails);
 
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
@@ -80,7 +80,7 @@ function Yelp(shop) {
   this.url = shop.url;
 }
 
-// function Trail(trail) {}
+function Trail(trail) {}
 
 // *********************
 // HELPER FUNCTIONS
@@ -262,16 +262,10 @@ function getYelp(request, response) {
         console.log('262 From SQL', result.rows[0]);
         response.send(result.rows);
       } else {
-
-// THIS IS BROKEN
-
-        // app.set('Authorization', `Bearer ${process.env.YELP_API_KEY}`);
-
-// THIS IS BROKEN
-
-        const url = `https://api.yelp.com/v3/businesses/search?ll=${request.query.data.latitude},${request.query.data.longitude}`;
+        const url = `https://api.yelp.com/v3/businesses/search?latitude=${request.query.data.latitude}&longitude=${request.query.data.longitude}`;
 
         superagent.get(url)
+          .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
           .then(result =>{
             const yelpSummaries = result.body.businesses.map(shop => {
               const summary = new Yelp(shop);
