@@ -11,7 +11,7 @@ require('dotenv').config();
 
 // Application Setup
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 1331;
 
 app.use(cors());
 
@@ -30,11 +30,11 @@ app.get('/location', (request, response) => {
     .catch(error => handleError(error, response));
 })
 
-// Do not comment in until you have locations in the DB
 app.get('/weather', getWeather);
-
-// Do not comment in until weather is working
 app.get('/meetups', getMeetups);
+app.get('/movies', getMovies);
+app.get('/yelp', getYelp);
+app.get('/trails', getTrails);
 
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
@@ -62,6 +62,37 @@ function Meetup(meetup) {
   this.host = meetup.group.who;
 }
 
+function Movie(movie) {
+  this.title = movie.title;
+  this.overview = movie.overview;
+  this.average_votes = movie.vote_average;
+  this.total_votes = movie.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+  this.popularity = movie.popularity;
+  this.released_on = movie.release_date;
+}
+
+function Yelp(shop) {
+  this.name = shop.name;
+  this.image_url = shop.image_url;
+  this.price = shop.price;
+  this.rating = shop.rating;
+  this.url = shop.url;
+}
+
+function Trail(trail) {
+  this.name = trail.name;
+  this.location = trail.location;
+  this.length = trail.length;
+  this.stars = trail.stars;
+  this.star_votes = trail.starVotes;
+  this.summary = trail.summary;
+  this.trail_url = trail.url
+  this.conditions = trail.conditionDetails
+  this.condition_date = trail.conditionDate.slice(0, 9);
+  this.condition_time =trail.conditionDate.slice(12, 19);
+}
+
 // *********************
 // HELPER FUNCTIONS
 // *********************
@@ -70,6 +101,7 @@ function handleError(err, res) {
   console.error(err);
   if (res) res.status(500).send('Sorry, something went wrong');
 }
+
 
 function getLocation(query) {
   // CREATE the query string to check for the existence of the location
@@ -90,28 +122,27 @@ function getLocation(query) {
 
         return superagent.get(url)
           .then(data => {
-            console.log('FROM API line 90');
+            console.log('FROM API line 101');
             // Throw an error if there is a problem with the API request
             if (!data.body.results.length) { throw 'no Data' }
 
             // Otherwise create an instance of Location
             else {
               let location = new Location(query, data.body.results[0]);
-              console.log('98', location);
+              console.log('108', location);
 
               // Create a query string to INSERT a new record with the location data
               let newSQL = `INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id;`;
-              console.log('102', newSQL)
+              console.log('112', newSQL)
               let newValues = Object.values(location);
-              console.log('104', newValues)
+              console.log('114', newValues)
 
               // Add the record to the database
               return client.query(newSQL, newValues)
                 .then(result => {
-                  console.log('108', result.rows);
                   // Attach the id of the newly created record to the instance of location.
                   // This will be used to connect the location to the other databases.
-                  console.log('114', result.rows[0].id)
+                  console.log('121', 'id:', result.rows[0].id)
                   location.id = result.rows[0].id;
                   return location;
                 })
@@ -133,7 +164,7 @@ function getWeather(request, response) {
     .then(result => {
       // Check to see if the location was found and return the results
       if (result.rowCount > 0) {
-        console.log('From SQL', result.rows);
+        console.log('From SQL', result.rows[0]);
         response.send(result.rows);
         // Otherwise get the location information from Dark Sky
       } else {
@@ -146,18 +177,12 @@ function getWeather(request, response) {
               return summary;
             });
             let newSQL = `INSERT INTO weathers(forecast, time, location_id) VALUES ($1, $2, $3);`;
-            console.log('151', weatherSummaries); // array of objects
+            console.log('156', weatherSummaries[0]); // array of objects
             weatherSummaries.forEach(summary => {
               let newValues = Object.values(summary);
               newValues.push(request.query.data.id);
               // Add the record to the database
               return client.query(newSQL, newValues)
-                .then(result => {
-                  console.log('158', result.rows);
-                  // Attach the id of the newly created record to the instance of location
-                  // This will be used to connect the location to the other databases.
-                  console.log('161', result.rows[0].id)
-                })
                 .catch(console.error);
             })
             response.send(weatherSummaries);
@@ -166,7 +191,6 @@ function getWeather(request, response) {
       }
     })
 }
-
 
 function getMeetups(request, response) {
   // CREATE the query string to check for the existence of the location
@@ -178,7 +202,7 @@ function getMeetups(request, response) {
     .then(result => {
       // Check to see if the location was found and return the results
       if (result.rowCount > 0) {
-        console.log('From SQL', result.rows);
+        console.log('From SQL', result.rows[0]);
         response.send(result.rows);
         // Otherwise get the location information from Meetup
       } else {
@@ -191,21 +215,114 @@ function getMeetups(request, response) {
               return summary;
             });
             let newSQL = `INSERT INTO meetups(link, name, creation_date, host, location_id) VALUES ($1, $2, $3, $4, $5);`;
-            console.log('209', meetupSummaries); // array of objects
+            console.log('195', meetupSummaries[0]); // array of objects
             meetupSummaries.forEach(summary => {
               let newValues = Object.values(summary);
               newValues.push(request.query.data.id);
               // Add the record to the database
               return client.query(newSQL, newValues)
-                .then(result => {
-                  console.log('216', result.rows);
-                  // Attach the id of the newly created record to the instance of location
-                  // This will be used to connect the location to the other databases.
-                  console.log('219', result.rows[0].id)
-                })
                 .catch(console.error);
             })
             response.send(meetupSummaries);
+          })
+          .catch(error => handleError(error, response));
+      }
+    })
+}
+
+function getMovies(request, response) {
+  const SQL = `SELECT * FROM movies WHERE location_id=$1`;
+  const values = [request.query.data.id];
+
+  return client.query(SQL, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('217 From SQL', result.rows[0]);
+        response.send(result.rows);
+      } else {
+        const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${request.query.data.search_query}`;
+
+        superagent.get(url)
+          .then(result =>{
+            const movieSummaries = result.body.results.map(movie => {
+              const summary = new Movie(movie);
+              return summary;
+            });
+            let newSQL = `INSERT INTO movies(title, overview, average_votes, total_votes, image_url, popularity, released_on, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`;
+            movieSummaries.forEach(summary => {
+              let newValues = Object.values(summary);
+              newValues.push(request.query.data.id);
+              return client.query(newSQL, newValues)
+                .catch(console.error);
+            })
+            response.send(movieSummaries);
+          })
+          .catch(error => handleError(error, response));
+      }
+    })
+}
+
+function getYelp(request, response) {
+
+  const SQL = `SELECT * FROM shops WHERE location_id=$1`;
+  const values = [request.query.data.id];
+
+  return client.query(SQL, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('262 From SQL', result.rows[0]);
+        response.send(result.rows);
+      } else {
+        const url = `https://api.yelp.com/v3/businesses/search?latitude=${request.query.data.latitude}&longitude=${request.query.data.longitude}`;
+
+        superagent.get(url)
+          .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+          .then(result =>{
+            const yelpSummaries = result.body.businesses.map(shop => {
+              const summary = new Yelp(shop);
+              return summary;
+            });
+            let newSQL = `INSERT INTO shops(name, image_url, price, rating, url, location_id) VALUES ($1, $2, $3, $4, $5, $6);`;
+            yelpSummaries.forEach(summary => {
+              let newValues = Object.values(summary);
+              newValues.push(request.query.data.id);
+              return client.query(newSQL, newValues)
+                .catch(console.error);
+            })
+            response.send(yelpSummaries);
+          })
+          .catch(error => handleError(error, response));
+      }
+    })
+}
+
+function getTrails(request, response) {
+  const SQL = `SELECT * FROM trails WHERE location_id=$1`;
+  const values = [request.query.data.id];
+
+  return client.query(SQL, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('306 From SQL', result.rows[0]);
+        response.send(result.rows);
+      } else {
+        const url = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&maxDistance=10&key=${process.env.TRAILS_API_KEY}`;
+
+        superagent.get(url)
+          .then(result =>{
+            const trailSummaries = result.body.trails.map(trail => {
+              const summary = new Trail(trail);
+              return summary;
+            });
+            let newSQL = `INSERT INTO trails(name, location, length, stars, star_votes, summary, trail_url, conditions, condition_date, condition_time, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`;
+            trailSummaries.forEach(summary => {
+              let newValues = Object.values(summary);
+
+              newValues.push(request.query.data.id);
+              return client.query(newSQL, newValues)
+                .catch(console.error);
+            })
+            response.send(trailSummaries);
           })
           .catch(error => handleError(error, response));
       }
