@@ -80,7 +80,18 @@ function Yelp(shop) {
   this.url = shop.url;
 }
 
-function Trail(trail) {}
+function Trail(trail) {
+  this.name = trail.name;
+  this.location = trail.location;
+  this.length = trail.length;
+  this.stars = trail.stars;
+  this.star_votes = trail.starVotes;
+  this.summary = trail.summary;
+  this.trail_url = trail.url
+  this.conditions = trail.conditionDetails
+  this.condition_date = trail.conditionDate.slice(0, 9);
+  this.condition_time =trail.conditionDate.slice(12, 19);
+}
 
 // *********************
 // HELPER FUNCTIONS
@@ -279,6 +290,39 @@ function getYelp(request, response) {
                 .catch(console.error);
             })
             response.send(yelpSummaries);
+          })
+          .catch(error => handleError(error, response));
+      }
+    })
+}
+
+function getTrails(request, response) {
+  const SQL = `SELECT * FROM trails WHERE location_id=$1`;
+  const values = [request.query.data.id];
+
+  return client.query(SQL, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('306 From SQL', result.rows[0]);
+        response.send(result.rows);
+      } else {
+        const url = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&maxDistance=10&key=${process.env.TRAILS_API_KEY}`;
+
+        superagent.get(url)
+          .then(result =>{
+            const trailSummaries = result.body.trails.map(trail => {
+              const summary = new Trail(trail);
+              return summary;
+            });
+            let newSQL = `INSERT INTO trails(name, location, length, stars, star_votes, summary, trail_url, conditions, condition_date, condition_time, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`;
+            trailSummaries.forEach(summary => {
+              let newValues = Object.values(summary);
+
+              newValues.push(request.query.data.id);
+              return client.query(newSQL, newValues)
+                .catch(console.error);
+            })
+            response.send(trailSummaries);
           })
           .catch(error => handleError(error, response));
       }

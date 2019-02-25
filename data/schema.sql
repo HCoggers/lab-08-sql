@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS shops, movies, weathers, meetups, locations;
+DROP TABLE IF EXISTS trails, shops, movies, weathers, meetups, locations;
 
 CREATE TABLE IF NOT EXISTS locations (
   id SERIAL PRIMARY KEY,
@@ -46,6 +46,22 @@ CREATE TABLE IF NOT EXISTS shops (
   price VARCHAR(5),
   rating NUMERIC(3, 1),
   url VARCHAR(500),
+  location_id INTEGER NOT NULL,
+  FOREIGN KEY (location_id) REFERENCES locations (id)
+);
+
+CREATE TABLE IF NOT EXISTS trails (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255),
+  location VARCHAR(255),
+  length NUMERIC(5, 1),
+  stars NUMERIC(3, 1),
+  star_votes NUMERIC(9, 0),
+  summary VARCHAR(1000),
+  trail_url VARCHAR(500),
+  conditions VARCHAR(255),
+  condition_date CHAR(10),
+  condition_time CHAR(8),
   location_id INTEGER NOT NULL,
   FOREIGN KEY (location_id) REFERENCES locations (id)
 );
