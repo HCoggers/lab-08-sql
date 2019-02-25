@@ -32,11 +32,11 @@ Expected Time for feature: 2 hours
 
 Result: 3 hr, 49 mins
 
-###02-22-2019 6:48pm - Movie API and database table up and functional (not deployed to Heroku)
+###02-25-2019 12:49pm - Yelp and Hiking API and database table up and functional (not working on Heroku deployment)
 
-Expected Time for feature: 2 hours
+Expected Time for feature: 3-4 hours
 
-Result: 3 hr, 49 mins
+Result: at least 5 hours
 
 ## Credits and Collaborations
 ###Powered by:
